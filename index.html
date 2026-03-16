@@ -2,29 +2,86 @@
 <html lang="zh-HK">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- 優化 3: 支援 iPad/iPhone App 模式 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="工尺譜">
+    
     <title>工尺譜發聲器</title>
     <style>
-        body { font-family: sans-serif; background-color: #7294c1; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .container { text-align: center; background: #e0e0e0; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); width: 320px; }
-        .button-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-        button { background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 12px 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; }
-        .pronounce { font-size: 13px; color: #666; }
-        .note-name { font-size: 30px; font-weight: bold; color: #f1b821; }
-        .solfa { font-size: 18px; font-weight: bold; color: #000; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            background-color: #7294c1; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            /* 防止行動裝置長按彈出選單 */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+        }
+        .container { 
+            text-align: center; 
+            background: #e0e0e0; 
+            padding: 25px 20px; 
+            border-radius: 20px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            width: 320px; 
+        }
+        .button-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 12px; 
+        }
+        button { 
+            background: #ffffff; 
+            border: 1px solid #bbb; 
+            border-radius: 12px; 
+            padding: 15px 0; 
+            cursor: pointer; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            transition: all 0.1s ease;
+            box-shadow: 0 3px 0 #ccc;
+            /* 移除行動裝置點擊藍色框 */
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* 優化 2: 增加按鈕回饋感 */
+        button:active {
+            transform: translateY(2px) scale(0.96);
+            box-shadow: 0 1px 0 #999;
+            background-color: #f9f9f9;
+        }
+
+        .pronounce { font-size: 13px; color: #666; margin-bottom: 2px; }
+        .note-name { font-size: 32px; font-weight: bold; color: #f1b821; line-height: 1.1; }
+        .solfa { font-size: 16px; font-weight: bold; color: #444; margin-top: 2px; }
+
+        /* 優化 4: 提示文字樣式 */
+        .hint-text {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .hint-text b { color: #d9534f; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2 style="margin-top:0;">工尺譜發聲器</h2>
+        <h2 style="margin-top:0; margin-bottom:10px; color:#333;">工尺譜發聲器</h2>
         
-        <p style="font-size: 12px; color: #666; margin-bottom: 20px; line-height: 1.4;">
-        💡 提示：如果沒有聲音，請檢查設備是否已<br>
-        <b>關閉靜音模式</b>（或側邊靜音開關）。
-    </p>
+        <div class="hint-text">
+            💡 提示：若無聲音，請確保已<br>
+            <b>關閉靜音模式</b> (或側邊開關)。
+        </div>
 
-    <div class="button-grid">
-        
+        <div class="button-grid">
             <button onclick="playNote(392.00)"><span class="pronounce">(何)</span><span class="note-name">合</span><span class="solfa">s,</span></button>
             <button onclick="playNote(440.00)"><span class="pronounce">(士)</span><span class="note-name">士</span><span class="solfa">l,</span></button>
             <button onclick="playNote(493.88)"><span class="pronounce">(二)</span><span class="note-name">乙</span><span class="solfa">t,</span></button>
@@ -34,6 +91,43 @@
             <button onclick="playNote(698.46)"><span class="pronounce">(番)</span><span class="note-name">反</span><span class="solfa">f</span></button>
             <button onclick="playNote(783.99)"><span class="pronounce">(了)</span><span class="note-name">六</span><span class="solfa">s</span></button>
             <button onclick="playNote(880.00)"><span class="pronounce">(烏)</span><span class="note-name">五</span><span class="solfa">l</span></button>
+        </div>
+    </div>
+
+    <script>
+        // 優化 1: 確保兼容舊版 iPad
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+
+        function playNote(freq) {
+            // 延遲初始化 AudioContext 以符合 iOS 安全策略
+            if (!audioCtx) {
+                audioCtx = new AudioContext();
+            }
+            
+            // 強制喚醒音訊 (解決 iOS 首次點擊無聲問題)
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 1);
+        }
+    </script>
+</body>
+</html>
         </div>
     </div>
     <script>
